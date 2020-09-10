@@ -1,3 +1,6 @@
+# pip3 install paho-mqtt
+# pip3 install --user zeroconf
+
 import time
 import threading
 import obd
@@ -5,18 +8,16 @@ import json
 import datetime
 import paho.mqtt.client as mqtt
 import collections
+import logging
 
 from obd import OBDCommand, Unit, OBDStatus
 from obd.protocols import ECU
 from obd.utils import bytes_to_int
 
-##
-## See if we can control the floating point output ni the JSON dump
-##from json import encoder
-##encoder.FLOAT_REPR = lambda o: format(o, '.2f')
-
-
-
+import socket
+from typing import cast
+from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf, ZeroconfServiceTypes
+from time import sleep
 
 #
 # ------------------------------------------------------------------
@@ -151,35 +152,35 @@ def readPIDs (connection, string, sleeptime, lock, *args):
             response = connection.query(cmd)
             pidData[ 'throttlePostion' ] = round( response.value.magnitude, 1 )
         except:
-            pass
+            pidData[ 'throttlePostion' ] = 0
        
         try:
             cmd = obd.commands.RUN_TIME
             response = connection.query(cmd)
             pidData[ 'runTime' ] = SECS2MINS( response.value.magnitude )
         except:
-            pass
+            pidData[ 'runTime' ] = 0
 
         try:
             cmd = obd.commands.CONTROL_MODULE_VOLTAGE           
             response = connection.query(cmd)
             pidData[ 'moduleVoltage' ] = round( response.value.magnitude, 1 )
         except:
-            pass
+            pidData[ 'moduleVoltage' ] = 0
 
         try:
             cmd = obd.commands.RELATIVE_THROTTLE_POS
             response = connection.query(cmd)
             pidData[ 'relativeThrottlePos' ] = round( response.value.magnitude, 1 )
         except:
-            pass
+            pidData[ 'relativeThrottlePos' ] = 0
 
         try:
             cmd = obd.commands.THROTTLE_ACTUATOR
             response = connection.query(cmd)
             pidData[ 'throttleActuator' ] = round( response.value.magnitude, 1 )
         except:
-            pass
+            pidData[ 'throttleActuator' ] = 0
 
         if not connection.is_connected():
             print( 'Yes, we lost connectivity to the ODB unit.' )
@@ -284,15 +285,90 @@ def readEngineOilTemp(connection):
     print( response )
     return response.value.magnitude
 
+
+host_name = None
+host_address = None
+service_info = None
+
+#
+# ----------------------------------------------------------------
+def discover_mqtt_host():
+
+    def on_service_state_change( zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange) -> None:
+        global service_info
+        global host_name
+        global host_address
+        #print("Service %s of type %s state changed: %s" % (name, service_type, state_change))
+
+        if state_change is ServiceStateChange.Added:
+            service_info = zeroconf.get_service_info(service_type, name)
+            #print("Info from zeroconf.get_service_info: %r" % (info))
+            if service_info:
+                addresses = ["%s:%d" % (socket.inet_ntoa(addr), cast(int, service_info.port)) for addr in service_info.addresses]
+                #print("  Addresses: %s" % ", ".join(addresses))
+                #print("  Weight: %d, priority: %d" % (service_info.weight, service_info.priority))
+                #print("  Server: %s" % (info.server,))
+                host_name = service_info.server
+                host_address = socket.inet_ntoa(service_info.addresses[0])
+                if service_info.properties:
+                    #print("  Properties are:")
+                    for key, value in service_info.properties.items():
+                        pass
+                        #print("    %s: %s" % (key, value))
+                else:
+                   pass
+                   #print("  No properties")
+            else:
+                #print("  No info")
+                pass
+        #print('\n')
+
+    zeroconf = Zeroconf(ip_version=IPVersion.V4Only)
+    browser = ServiceBrowser(zeroconf, "_mqtt._tcp.local.",handlers=[on_service_state_change])
+
+    i = 0
+    while (service_info is None and i < 50):
+        sleep( 0.1 )
+        i += 1
+
+    zeroconf.close()
+    try:
+        return host_address, host_name
+    except AttributeError:
+        return None
+
 #
 # -----------------------------------------------------------------
 if __name__ == "__main__":
+    logging.basicConfig(filename='/tmp/obd2rv.log', level=logging.INFO)
+    logging.info('OBD2Rv v1.0 []')
+    logging.debug('Attempting to find mqtt broker via mDNS')
+
+    try:
+        host = sys.argv[1]
+        mqtt_broker_address = sys.argv[1]
+    except:
+        print( 'No host passed in on command line. Trying mDNS' )
+   
+    host = discover_mqtt_host()
+    if (host is not None):
+        mqtt_broker_address = host[0]
+        logging.info( 'Found MQTT Broker using mDNS on {}.{}'.format(host[0], host[1]))
+    else:
+        logging.warning('Unable to locate MQTT Broker using DNS')
+        try:
+            mqtt_broker_address = sys.argv[1]
+        except:
+            logging.critical('mDNS failed and no MQTT Broker address passed in via command line. Exiting')
+            sys.exit(1)
+
+    logging.debug('Connecting to {}'.format(mqtt_broker_address))
     try:
         print( 'Trying to connect to our MQTT broker...' )
         myMqttClient = mqtt.Client()
         myMqttClient.on_connect = on_connect
         myMqttClient.on_message = on_message
-        myMqttClient.connect( "gx100.local", 1883, 60 )
+        myMqttClient.connect( mqtt_broker_address, 1883, 60 )
     except:
         print( 'Unable to connect to our MQTT Broker!')
 
