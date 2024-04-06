@@ -1,6 +1,7 @@
 # pip3 install paho-mqtt
 # pip3 install --user zeroconf
 
+import sys
 import time
 import threading
 import obd
@@ -63,170 +64,160 @@ alarmTopic = 'OBD/ALARM'
 
 #
 # -----------------------------------------------------------------
-def readPIDs (connection, string, sleeptime, lock, *args):
-    while 1:
-        lock.acquire()
-        print( 'Reading PIDs...' )
+def readPIDs (connection):
+    logging.info( 'Reading PIDs...' )
 
-        pidData[ 'topic' ] = statusTopic
-        pidData[ 'version' ] = version
-        pidData[ 'dateTime' ] = time.strftime( "%FT%T%z" )
-        pidData[ 'connected' ] = (connection.is_connected())
+    pidData[ 'topic' ] = statusTopic
+    pidData[ 'version' ] = version
+    pidData[ 'dateTime' ] = time.strftime( "%FT%T%z" )
+    pidData[ 'connected' ] = (connection.is_connected())
 
 #
 #   to do zero these out
 #   round voltages
 
-        try:
-            cmd = obd.commands.ELM_VOLTAGE
-            response = connection.query(cmd)
-            pidData[ 'adapterVoltage' ] = response.value.magnitude
-        except:
-            pidData[ 'adapterVoltage' ] = 0
+    try:
+        cmd = obd.commands.ELM_VOLTAGE
+        response = connection.query(cmd)
+        pidData[ 'adapterVoltage' ] = response.value.magnitude
+    except:
+        pidData[ 'adapterVoltage' ] = 0
 
-        try:
-            cmd = obd.commands.AMBIANT_AIR_TEMP
-            response = connection.query(cmd)
-            pidData[ 'ambientAirTemp' ] = C2F( response.value.magnitude )
-        except:
-            pidData[ 'ambientAirTemp' ] = 0
+    try:
+        cmd = obd.commands.AMBIANT_AIR_TEMP
+        response = connection.query(cmd)
+        pidData[ 'ambientAirTemp' ] = C2F( response.value.magnitude )
+    except:
+        pidData[ 'ambientAirTemp' ] = 0
 
-        try:
-            cmd = obd.commands.BAROMETRIC_PRESSURE
-            response = connection.query(cmd)
-            pidData[ 'ambientPressure' ] = round( KP2INHG( response.value.magnitude ), 1 )
-        except:
-            pidData[ 'ambientPressure' ] = 0
+    try:
+        cmd = obd.commands.BAROMETRIC_PRESSURE
+        response = connection.query(cmd)
+        pidData[ 'ambientPressure' ] = round( KP2INHG( response.value.magnitude ), 1 )
+    except:
+        pidData[ 'ambientPressure' ] = 0
 
-        try:
-            cmd = obd.commands.COOLANT_TEMP
-            response = connection.query(cmd)
-            pidData[ 'coolantTemp' ] = C2F( response.value.magnitude )
-        except:
-            pidData[ 'coolantTemp' ] = 0
+    try:
+        cmd = obd.commands.COOLANT_TEMP
+        response = connection.query(cmd)
+        pidData[ 'coolantTemp' ] = C2F( response.value.magnitude )
+    except:
+        pidData[ 'coolantTemp' ] = 0
 
-        try:
-            cmd = obd.commands.DISTANCE_W_MIL
-            response = connection.query(cmd)
-            pidData[ 'distanceWithMIL' ] = KPH2MPH( response.value.magnitude )
-        except:
-            pidData[ 'distanceWithMIL' ] = 0
+    try:
+        cmd = obd.commands.DISTANCE_W_MIL
+        response = connection.query(cmd)
+        pidData[ 'distanceWithMIL' ] = KPH2MPH( response.value.magnitude )
+    except:
+        pidData[ 'distanceWithMIL' ] = 0
 
-        try:
-            cmd = obd.commands.ELM_VOLTAGE
-            response = connection.query(cmd)
-            pidData[ 'adapterVoltage' ] = round( response.value.magnitude, 1 )
-        except:
-            pidData[ 'adapterVoltage' ] = 0
+    try:
+        cmd = obd.commands.ELM_VOLTAGE
+        response = connection.query(cmd)
+        pidData[ 'adapterVoltage' ] = round( response.value.magnitude, 1 )
+    except:
+        pidData[ 'adapterVoltage' ] = 0
 
-        try:
-            cmd = obd.commands.ENGINE_LOAD
-            response = connection.query(cmd)
-            pidData[ 'engineLoad' ] = response.value.magnitude
-        except:
-            pidData[ 'engineLoad' ] = 0
+    try:
+        cmd = obd.commands.ENGINE_LOAD
+        response = connection.query(cmd)
+        pidData[ 'engineLoad' ] = response.value.magnitude
+    except:
+        pidData[ 'engineLoad' ] = 0
 
-        try:
-            cmd = obd.commands.FUEL_LEVEL
-            response = connection.query(cmd)
-            pidData[ 'fuelLevel' ] = round( response.value.magnitude, 1 )
-        except:
-            pidData[ 'fuelLevel' ] = 0
+    try:
+        cmd = obd.commands.FUEL_LEVEL
+        response = connection.query(cmd)
+        pidData[ 'fuelLevel' ] = round( response.value.magnitude, 1 )
+    except:
+        pidData[ 'fuelLevel' ] = 0
 
-        try:
-            cmd = obd.commands.RPM
-            response = connection.query(cmd)
-            pidData[ 'RPM' ] = response.value.magnitude
-        except:
-            pidData[ 'RPM' ] = 0
+    try:
+        cmd = obd.commands.RPM
+        response = connection.query(cmd)
+        pidData[ 'RPM' ] = response.value.magnitude
+    except:
+        pidData[ 'RPM' ] = 0
 
-        try:
-            cmd = obd.commands.SPEED
-            response = connection.query(cmd)
-            pidData[ 'speed' ] = KPH2MPH( response.value.magnitude )
-        except:
-            pidData[ 'speed' ] = 0
+    try:
+        cmd = obd.commands.SPEED
+        response = connection.query(cmd)
+        pidData[ 'speed' ] = KPH2MPH( response.value.magnitude )
+    except:
+        pidData[ 'speed' ] = 0
 
-        try:
-            cmd = obd.commands.THROTTLE_POS
-            response = connection.query(cmd)
-            pidData[ 'throttlePostion' ] = round( response.value.magnitude, 1 )
-        except:
-            pidData[ 'throttlePostion' ] = 0
+    try:
+        cmd = obd.commands.THROTTLE_POS
+        response = connection.query(cmd)
+        pidData[ 'throttlePostion' ] = round( response.value.magnitude, 1 )
+    except:
+        pidData[ 'throttlePostion' ] = 0
        
-        try:
-            cmd = obd.commands.RUN_TIME
-            response = connection.query(cmd)
-            pidData[ 'runTime' ] = SECS2MINS( response.value.magnitude )
-        except:
-            pidData[ 'runTime' ] = 0
+    try:
+        cmd = obd.commands.RUN_TIME
+        response = connection.query(cmd)
+        pidData[ 'runTime' ] = SECS2MINS( response.value.magnitude )
+    except:
+        pidData[ 'runTime' ] = 0
 
-        try:
-            cmd = obd.commands.CONTROL_MODULE_VOLTAGE           
-            response = connection.query(cmd)
-            pidData[ 'moduleVoltage' ] = round( response.value.magnitude, 1 )
-        except:
-            pidData[ 'moduleVoltage' ] = 0
+    try:
+        cmd = obd.commands.CONTROL_MODULE_VOLTAGE           
+        response = connection.query(cmd)
+        pidData[ 'moduleVoltage' ] = round( response.value.magnitude, 1 )
+    except:
+        pidData[ 'moduleVoltage' ] = 0
 
-        try:
-            cmd = obd.commands.RELATIVE_THROTTLE_POS
-            response = connection.query(cmd)
-            pidData[ 'relativeThrottlePos' ] = round( response.value.magnitude, 1 )
-        except:
-            pidData[ 'relativeThrottlePos' ] = 0
+    try:
+        cmd = obd.commands.RELATIVE_THROTTLE_POS
+        response = connection.query(cmd)
+        pidData[ 'relativeThrottlePos' ] = round( response.value.magnitude, 1 )
+    except:
+        pidData[ 'relativeThrottlePos' ] = 0
 
-        try:
-            cmd = obd.commands.THROTTLE_ACTUATOR
-            response = connection.query(cmd)
-            pidData[ 'throttleActuator' ] = round( response.value.magnitude, 1 )
-        except:
-            pidData[ 'throttleActuator' ] = 0
+    try:
+        cmd = obd.commands.THROTTLE_ACTUATOR
+        response = connection.query(cmd)
+        pidData[ 'throttleActuator' ] = round( response.value.magnitude, 1 )
+    except:
+        pidData[ 'throttleActuator' ] = 0
 
-        if not connection.is_connected():
-            print( 'Yes, we lost connectivity to the ODB unit.' )
-
-        lock.release()
-        time.sleep( sleeptime )
+    if not connection.is_connected():
+        logging.error( 'Yes, we lost connectivity to the ODB unit.' )
 
 
 #
 # -----------------------------------------------------------------
 def checkForDTCs (connection, mqttClient, string, sleeptime, lock, *args):
 
-    while 1:
-        lock.acquire()
-        print( 'Checking to see if Check Enging Light is on or Diagnostic Trouble Codes are present...' )
+    logging.info( 'Checking to see if Check Enging Light is on or Diagnostic Trouble Codes are present...' )
 
-        dtcData[ 'topic' ] = alarmTopic
-        dtcData[ 'version' ] = version
-        dtcData[ 'dateTime' ] = time.strftime( "%FT%T%z" )
+    dtcData[ 'topic' ] = alarmTopic
+    dtcData[ 'version' ] = version
+    dtcData[ 'dateTime' ] = time.strftime( "%FT%T%z" )
 
-        try:
-            cmd = obd.commands.GET_DTC
-            response = connection.query(cmd)
-            dtcData[ 'dtcCount' ] = response.value.magnitude
+    try:
+        cmd = obd.commands.GET_DTC
+        response = connection.query(cmd)
+        dtcData[ 'dtcCount' ] = response.value.magnitude
 
-            #
-            # Have we driven some distance with the CEL/MIL on?
-            cmd = obd.commands.DISTANCE_W_MIL
-            response = connection.query(cmd)
-            dtcData[ 'dtcDistance' ] = response.value.to("miles")
-            if response.value.magnitude > 0.0:
-                mqttClient.publish( "OBD/ALARM", json.dumps( dtcData ) )
+        #
+        # Have we driven some distance with the CEL/MIL on?
+        cmd = obd.commands.DISTANCE_W_MIL
+        response = connection.query(cmd)
+        dtcData[ 'dtcDistance' ] = response.value.to("miles")
+        if response.value.magnitude > 0.0:
+            mqttClient.publish( "OBD/ALARM", json.dumps( dtcData ) )
 
-        except:
-            print( 'Error reading DTCs - exception thrown. Did we lose connectivity?' )
-            if not connection.is_connected():
-                print( 'Yes, we lost connectivity to the ODB unit.' )
-
-        lock.release()
-        time.sleep( sleeptime )
+    except:
+        logging.error( 'Error reading DTCs - exception thrown. Did we lose connectivity?' )
+        if not connection.is_connected():
+            logging.error( 'Yes, we lost connectivity to the ODB unit.' )
 
 #
 # -----------------------------------------------------------------
 # The callback for when the mqttClient receives a CONNACK response from the server.
-def on_connect (mqttClient, userdata, flags, rc):
-    print( "MQTT Broker connected with result code " + str( rc ) )
+def on_connect (client, userdata, flags, reason_code, properties):
+    logging.info( "MQTT Broker connected with result code " + str( reason_code ) )
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
@@ -236,22 +227,40 @@ def on_connect (mqttClient, userdata, flags, rc):
 # -----------------------------------------------------------------
 # The callback for when a PUBLISH message is received from the server.
 def on_message (mqttClient, userdata, msg):
-    print( msg.topic + " " + str( msg.payload ) )
+    logging.info( msg.topic + " " + str( msg.payload ) )
 
 
 #
 # -----------------------------------------------------------------
-def sendMQTTData (mqttClient, string, sleeptime, lock, *args):
-    while 1:
-        lock.acquire()
-        print( 'Keeping Port Alive...' )
-        jsonData = json.dumps( pidData )
-        print( jsonData )
-        #
-        # We put the Topic in as part of the packet - but not in the JSON data
-        mqttClient.publish("OBD/STATUS", jsonData )
-        lock.release()
-        time.sleep( sleeptime )
+def sendMQTTData (mqttClient):
+    logging.info( 'Sending data' )
+    jsonData = json.dumps( pidData )
+    logging.debug( jsonData )
+    #
+    # We put the Topic in as part of the packet - but not in the JSON data
+    mqttClient.publish("OBD/DATA", jsonData )
+
+#
+# -----------------------------------------------------------------
+def sendOBDStatus (mqttClient):
+    statusData = collections.OrderedDict()
+    statusTopic = 'OBD/STATUS'
+
+
+    statusData[ 'topic' ] = statusTopic
+    statusData[ 'version' ] = version
+    statusData[ 'dateTime' ] = time.strftime( "%FT%T%z" )
+    try:
+        statusData[ 'connected' ] = (connection.is_connected())
+    except:
+        statusData[ 'connected' ] = 'false'
+
+    logging.info( 'Sending status' )
+    jsonData = json.dumps( statusData )
+    logging.debug( jsonData )
+    #
+    # We put the Topic in as part of the packet - but not in the JSON data
+    mqttClient.publish(statusTopic, jsonData )
 
 #
 # -----------------------------------------------------------------
@@ -260,9 +269,6 @@ def sendDisconnectedMessage ():
 
 #
 # ------------------------------------------------------------------
-def log(msg):
-    print( msg )
-
 #
 # -----------------------------------------------------------------
 def temperature(messages):
@@ -274,16 +280,20 @@ def temperature(messages):
 #
 # -----------------------------------------------------------------
 def readEngineOilTemp(connection):
-    cmd = OBDCommand( "FORD_OIL_TEMP",      \
-               "Ford Engine Oil Temp",      \
-               "221310",                    \
-               2,                           \
-               temp,                        \
-               ECU.ENGINE,                  \
-               True)             # (optional) allow a "01" to be added for speed
-    response = connection.query( cmd, force=True )
-    print( response )
-    return response.value.magnitude
+    try:
+        cmd = OBDCommand( "FORD_OIL_TEMP",      \
+                   "Ford Engine Oil Temp",      \
+                   "221310",                    \
+                   2,                           \
+                   temp,                        \
+                   ECU.ENGINE,                  \
+                   True)             # (optional) allow a "01" to be added for speed
+        response = connection.query( cmd, force=True )
+        logging.info( response )
+        return response.value.magnitude
+    except:
+        logging.error('Error reading FORD Oil Temps')
+        return 0
 
 
 host_name = None
@@ -348,7 +358,7 @@ if __name__ == "__main__":
         host = sys.argv[1]
         mqtt_broker_address = sys.argv[1]
     except:
-        print( 'No host passed in on command line. Trying mDNS' )
+        logging.info( 'No host passed in on command line. Trying mDNS' )
    
     host = discover_mqtt_host()
     if (host is not None):
@@ -362,57 +372,46 @@ if __name__ == "__main__":
             logging.critical('mDNS failed and no MQTT Broker address passed in via command line. Exiting')
             sys.exit(1)
 
-    logging.debug('Connecting to {}'.format(mqtt_broker_address))
+    logging.info('Connecting to {}'.format(mqtt_broker_address))
     try:
-        print( 'Trying to connect to our MQTT broker...' )
-        myMqttClient = mqtt.Client()
-        myMqttClient.on_connect = on_connect
-        myMqttClient.on_message = on_message
-        myMqttClient.connect( mqtt_broker_address, 1883, 60 )
+        logging.info( 'Trying to connect to our MQTT broker...' )
+        mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        mqttc.on_connect = on_connect
+        mqttc.on_message = on_message
+        mqttc.connect(mqtt_broker_address, 1883, 60)
+        mqttc.loop_start()
     except:
-        print( 'Unable to connect to our MQTT Broker!')
+        logging.error('Unable to connect to our MQTT Broker!')
+        sys.exit(1)
 
-    #obd.debug.console=True
-    #obd.debug.handler = log
-    obd.logger.setLevel(obd.logging.DEBUG)
+    #obd.logger.setLevel(obd.logging.DEBUG)
 
-    print( 'Connecting to the OBD-II port...' )
-    connection = obd.OBD()
+    try: 
+        logging.info( 'Connecting to the OBD-II port...' )
+        sendOBDStatus(mqttc)
+        connection = obd.OBD()
+        sendOBDStatus(mqttc)
 
-    if connection.status() == OBDStatus.ELM_CONNECTED:
-        print( 'ELM327 Interface is online. But car is not responding to ATRV command.' )
+        if connection.status() == OBDStatus.ELM_CONNECTED:
+            logging.info( 'ELM327 Interface is online. But car is not responding to ATRV command.' )
 
-    if (connection.status() == OBDStatus.CAR_CONNECTED or connection.status() == OBDStatus.OBD_CONNECTED):
-        print( 'ELM327 Interface is online and Car is connected.' )
+        if (connection.status() == OBDStatus.CAR_CONNECTED or connection.status() == OBDStatus.OBD_CONNECTED):
+            logging.info( 'ELM327 Interface is online and Car is connected.' )
 
-    if connection.is_connected():
-        print( 'Successfully connected to the OBD-II device. Car is online and ignition is on.' )
-
-    try:
-        lock = threading.Lock()
-        # thread.start_new_thread( readPIDs, (connection, "Read PIDs", 2, lock ))
-        t1 = threading.Thread( target=readPIDs, args=(connection, "Read PIDs", 2, lock) )
-        t1.start()
-
-        #thread.start_new_thread( sendMQTTData, (myMqttClient, "Send MQTT Data", 5, lock ))
-        t2 = threading.Thread( target=sendMQTTData, args=(myMqttClient, "Send MQTT Data", 5, lock) )
-        t2.start()
-        #thread.start_new_thread( checkForDTCs, (myMqttClient, "checkForDTC", 61, lock ))
-        t3 = threading.Thread( target=checkForDTCs, args=(connection, myMqttClient, "checkForDTC", 61, lock) )
-        t3.start()
+        if connection.is_connected():
+            logging.info( 'Successfully connected to the OBD-II device. Car is online and ignition is on.' )
 
         while 1:
-            myMqttClient.loop()
-            time.sleep( 1 )
+            readPIDs( mqttc );
+            time.sleep( 5 )
     except:
-        myMqttClient.disconnect()
-        connection.close()
-    
-    t1.terminate()
-    t1.join()
-    t2.terminate()
-    t2.join()
-    t3.terminate()
-    t3.join()
+        mqttc.loop_stop()
+        mqttc.disconnect()
+        try:
+            connection.close()
+        except:
+            pass
+        logging.error('Exception in main thread - exiting')
+        sys.exit(1)
 
 
