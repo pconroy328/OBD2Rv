@@ -1,6 +1,6 @@
 [Unit]
 Description=OBD2 Service
-After=syslog.target mosquitto
+After=syslog.target mosquitto.service
 
 [Service]
 Type=simple

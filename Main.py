@@ -70,7 +70,7 @@ dtc_data = collections.OrderedDict()
 def read_PIDs (connection):
     logging.info( 'Reading PIDs...' )
 
-    pid_data[ 'topic' ] = status_topic
+    pid_data[ 'topic' ] = pid_topic
     pid_data[ 'version' ] = version
     pid_data[ 'dateTime' ] = time.strftime( "%FT%T%z" )
     pid_data[ 'connected' ] = (connection.is_connected())
@@ -130,7 +130,7 @@ def read_PIDs (connection):
     try:
         cmd = obd.commands.ENGINE_LOAD
         response = connection.query(cmd)
-        pid_data[ 'engineLoad' ] = response.value.magnitude
+        pid_data[ 'engineLoad' ] = round(response.value.magnitude,1)
     except Exception as ex:
         logging.error('Exception ENGINE LOAD',ex);
         pid_data[ 'engineLoad' ] = 0
@@ -170,7 +170,7 @@ def read_PIDs (connection):
     try:
         cmd = obd.commands.RUN_TIME
         response = connection.query(cmd)
-        pid_data[ 'runTime_mins' ] = SECS2MINS( response.value.magnitude )
+        pid_data[ 'runTime_mins' ] = round(SECS2MINS( response.value.magnitude ),1)
     except Exception as ex:
         logging.error('Exception RUN TIME',ex);
         pid_data[ 'runTime_mins' ] = -1
@@ -202,7 +202,7 @@ def read_PIDs (connection):
 
 #
 # -----------------------------------------------------------------
-def checkForDTCs (connection, mqttClient, string, sleeptime, lock, *args):
+def checkForDTCs (connection, mqttClient):
 
     logging.info( 'Checking to see if Check Enging Light is on or Diagnostic Trouble Codes are present...' )
 
@@ -423,6 +423,7 @@ if __name__ == "__main__":
             send_obd_status(mqttc,connection)
             read_PIDs( connection )
             mqttc.publish(pid_topic, json.dumps( pid_data ) )
+            checkForDTCs(connection, mqttc)
             time.sleep( 10 )
 
     except Exception as ex:
