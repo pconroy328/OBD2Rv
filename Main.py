@@ -421,10 +421,13 @@ if __name__ == "__main__":
 
         while 1:
             send_obd_status(mqttc,connection)
-            read_PIDs( connection )
-            mqttc.publish(pid_topic, json.dumps( pid_data ) )
+            read_PIDs(connection)
+            mqttc.publish(pid_topic, json.dumps( pid_data ))
             checkForDTCs(connection, mqttc)
-            time.sleep( 10 )
+            if not connnection.is_connected():
+                break 
+            else:
+                time.sleep(10)
 
     except Exception as ex:
         send_obd_status(mqttc,None)
