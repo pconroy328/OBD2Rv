@@ -1,0 +1,19 @@
+[Unit]
+Description=OBD2 Service
+After=syslog.target mosquitto
+
+[Service]
+Type=simple
+User=pconroy
+Group=pconroy
+WorkingDirectory=/home/pconroy/OBD2Rv
+ExecStart=python3 Main.py mqttrv.local 
+##ExecStart=startOBD2.sh mqttrv.local 
+StandardOutput=null
+StandardError=null
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=default.target
+
