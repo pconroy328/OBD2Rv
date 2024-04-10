@@ -64,6 +64,10 @@ alarm_topic = 'OBD/ALARM'
 pid_data = collections.OrderedDict()
 dtc_data = collections.OrderedDict()
 
+##
+## flag to exit our infinite loop if we hit an error
+exit_early = false
+
 
 #
 # -----------------------------------------------------------------
@@ -92,6 +96,8 @@ def read_PIDs (connection):
         response = connection.query(cmd)
         pid_data[ 'ambientAirTemp' ] = round(C2F(response.value.magnitude),1)
     except Exception as ex:
+        ## SOMETHING is wrong - we may have lost connectivity
+        exit_early = true
         logging.error('Exception AMBIENT AIR TEMP',ex);
         pid_data[ 'ambientAirTemp' ] = 0
 
@@ -422,6 +428,8 @@ if __name__ == "__main__":
         while 1:
             send_obd_status(mqttc,connection)
             read_PIDs(connection)
+            if exit_early:
+                break
             mqttc.publish(pid_topic, json.dumps( pid_data ))
             checkForDTCs(connection, mqttc)
             if not connnection.is_connected():
