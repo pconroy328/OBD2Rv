@@ -66,7 +66,7 @@ dtc_data = collections.OrderedDict()
 
 ##
 ## flag to exit our infinite loop if we hit an error
-exit_early = false
+exit_early = False
 
 
 #
@@ -79,10 +79,8 @@ def read_PIDs (connection):
     pid_data[ 'dateTime' ] = time.strftime( "%FT%T%z" )
     pid_data[ 'connected' ] = (connection.is_connected())
 
-#
-#   to do zero these out
-#   round voltages
-
+    global	exit_early
+    
     try:
         cmd = obd.commands.ELM_VOLTAGE
         response = connection.query(cmd)
@@ -97,7 +95,7 @@ def read_PIDs (connection):
         pid_data[ 'ambientAirTemp' ] = round(C2F(response.value.magnitude),1)
     except Exception as ex:
         ## SOMETHING is wrong - we may have lost connectivity
-        exit_early = true
+        exit_early = True
         logging.error('Exception AMBIENT AIR TEMP',ex);
         pid_data[ 'ambientAirTemp' ] = 0
 
@@ -209,7 +207,6 @@ def read_PIDs (connection):
 #
 # -----------------------------------------------------------------
 def checkForDTCs (connection, mqttClient):
-
     logging.info( 'Checking to see if Check Enging Light is on or Diagnostic Trouble Codes are present...' )
 
     dtc_data[ 'topic' ] = alarm_topic
@@ -219,15 +216,19 @@ def checkForDTCs (connection, mqttClient):
     try:
         cmd = obd.commands.GET_DTC
         response = connection.query(cmd)
-        dtc_data[ 'dtcCount' ] = response.value.magnitude
+        dtcCount = len(response.value)
+        dtc_data[ 'dtcCount' ] = dtcCount
 
         #
         # Have we driven some distance with the CEL/MIL on?
         cmd = obd.commands.DISTANCE_W_MIL
         response = connection.query(cmd)
-        dtc_data[ 'dtcDistance' ] = response.value.to("miles")
-        if response.value.magnitude > 0.0:
+        miles=response.value.to("miles")
+        dtc_data[ 'dtcDistance' ] = round(KPH2MPH(response.value.magnitude),1)
+
+        if dtcCount > 0 or response.value.magnitude > 0.0:
             mqttClient.publish( alarm_topic, json.dumps( dtc_data ) )
+            #pass
 
     except Exception as ex:
         logging.error( 'Error reading DTCs - exception thrown. Did we lose connectivity?', ex )
@@ -369,9 +370,8 @@ def discover_mqtt_host():
 #
 # -----------------------------------------------------------------
 def connect_mqtt_broker(mqtt_broker_address):
-    logging.info('Connecting to {}'.format(mqtt_broker_address))
+    logging.debug('Connecting to {}'.format(mqtt_broker_address))
     try:
-        logging.info( 'Trying to connect to our MQTT broker...' )
         mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         mqttc.on_connect = on_connect
         mqttc.on_message = on_message
@@ -387,10 +387,8 @@ def connect_mqtt_broker(mqtt_broker_address):
 #
 # -----------------------------------------------------------------
 if __name__ == "__main__":
-    # Create a custom formatter with your desired time format
-    time_format = "%Y-%m-%d %H:%M:%S"
-    ##formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt=time_format)
-
+    #time_format = "%Y-%m-%d %H:%M:%S"
+    time_format = "%d%b%Y %H:%M:%S.%f"
     logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', datefmt=time_format, filename='/tmp/obd2rv.log', level=logging.DEBUG)
     logging.warning('OBD2Rv v1.0')
 
@@ -399,11 +397,11 @@ if __name__ == "__main__":
     try:
         mqtt_broker_address = sys.argv[1]
     except Exception as ex:
-        logging.info( 'No host passed in on command line. Trying mDNS' )
+        logging.debug( 'No host passed in on command line. Trying mDNS' )
         host = discover_mqtt_host()
         if (host is not None):
             mqtt_broker_address = host[0]
-            logging.info( 'Found MQTT Broker using mDNS on {}.{}'.format(host[0], host[1]))
+            logging.debug( 'Found MQTT Broker using mDNS on {}.{}'.format(host[0], host[1]))
         else:
             logging.warning('Unable to locate MQTT Broker using mDNS')
             try:
@@ -417,7 +415,8 @@ if __name__ == "__main__":
     if (mqttc == None):
         sys.exit(1)
 
-
+    global exit_early
+    
     try: 
         logging.info( 'Connecting to the OBD-II port...' )
         connection = connect_obd()
@@ -432,7 +431,7 @@ if __name__ == "__main__":
                 break
             mqttc.publish(pid_topic, json.dumps( pid_data ))
             checkForDTCs(connection, mqttc)
-            if not connnection.is_connected():
+            if not connection.is_connected():
                 break 
             else:
                 time.sleep(10)
