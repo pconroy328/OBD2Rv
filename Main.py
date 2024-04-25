@@ -64,10 +64,6 @@ alarm_topic = 'OBD/ALARM'
 pid_data = collections.OrderedDict()
 dtc_data = collections.OrderedDict()
 
-##
-## flag to exit our infinite loop if we hit an error
-exit_early = False
-
 
 #
 # -----------------------------------------------------------------
@@ -79,8 +75,6 @@ def read_PIDs (connection):
     pid_data[ 'dateTime' ] = time.strftime( "%FT%T%z" )
     pid_data[ 'connected' ] = (connection.is_connected())
 
-    global	exit_early
-    
     try:
         cmd = obd.commands.ELM_VOLTAGE
         response = connection.query(cmd)
@@ -95,7 +89,6 @@ def read_PIDs (connection):
         pid_data[ 'ambientAirTemp' ] = round(C2F(response.value.magnitude),1)
     except Exception as ex:
         ## SOMETHING is wrong - we may have lost connectivity
-        exit_early = True
         logging.error('Exception AMBIENT AIR TEMP',ex);
         pid_data[ 'ambientAirTemp' ] = 0
 
@@ -311,7 +304,16 @@ def connect_obd():
         logging.critical('Exception opening port: ', ex )
         connection = None
     else:
-        print('Port is open, connection is ready!')
+        if (connection.status() == OBDStatus.CAR_CONNECTED): 
+            logging.info('Port is open, connection is ready!')
+        elif (connection.status() == OBDStatus.OBD_CONNECTED):
+            logging.info('Ignition is off')
+            connection = None
+        elif (connection.status() == OBDStatus.ELM_CONNECTED):
+            logging.info('Connected to adapter, but nothing else is working')
+            connection = None
+        else:
+            connection = None
 
     return connection
     
@@ -415,8 +417,6 @@ if __name__ == "__main__":
     if (mqttc == None):
         sys.exit(1)
 
-    global exit_early
-    
     try: 
         logging.info( 'Connecting to the OBD-II port...' )
         connection = connect_obd()
@@ -427,8 +427,6 @@ if __name__ == "__main__":
         while 1:
             send_obd_status(mqttc,connection)
             read_PIDs(connection)
-            if exit_early:
-                break
             mqttc.publish(pid_topic, json.dumps( pid_data ))
             checkForDTCs(connection, mqttc)
             if not connection.is_connected():
