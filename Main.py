@@ -388,8 +388,8 @@ def connect_mqtt_broker(mqtt_broker_address):
 # -----------------------------------------------------------------
 if __name__ == "__main__":
     #time_format = "%Y-%m-%d %H:%M:%S"
-    time_format = "%d%b%Y %H:%M:%S.%f"
-    logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', datefmt=time_format, filename='/tmp/obd2rv.log', level=logging.DEBUG)
+    time_format = "%d%b%Y %H:%M:%S"
+    logging.basicConfig(format='%(asctime)s:%(levelname)s: %(message)s', datefmt=time_format, filename='/tmp/obd2rv.log', level=logging.INFO)
     logging.warning('OBD2Rv v1.0')
 
     ## 
