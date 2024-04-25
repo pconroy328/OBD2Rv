@@ -35,8 +35,8 @@ pair_device() {
 
     # Check output
     if [[ $STATUS == *"Paired"* ]] && [[ $STATUS == *"Trusted"* ]] ; then
-    echo "Successfully paired $MAC "
-    return 0
+       echo "Successfully paired $MAC "
+       return 0
     fi
 
     echo "ERROR: $MAC not succesfully paired"
@@ -60,5 +60,5 @@ do
       pair_device
       connect
    fi
-   sleep 5
+   exit 0
 done

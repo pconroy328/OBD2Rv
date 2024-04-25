@@ -296,7 +296,7 @@ def readEngineOilTemp(connection):
 # ----------------------------------------------------------------
 def connect_obd():
     try:
-        connection = obd.OBD()
+        connection = obd.OBD(start_low_power=True)
     except serial.serialutil.SerialException as ex:
         logging.critical('Serial Port Exception opening port.')
         connection = None
@@ -306,6 +306,7 @@ def connect_obd():
     else:
         if (connection.status() == OBDStatus.CAR_CONNECTED): 
             logging.info('Port is open, connection is ready!')
+            logging.info('Using protocol:', connection.protocol_name())
         elif (connection.status() == OBDStatus.OBD_CONNECTED):
             logging.info('Ignition is off')
             connection = None
