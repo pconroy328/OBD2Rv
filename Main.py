@@ -10,6 +10,8 @@ import paho.mqtt.client as mqtt
 import collections
 import logging
 
+###import obd
+sys.path.append('/home/pconroy/python-OBD')
 import obd
 from obd import OBDCommand, Unit, OBDStatus
 from obd.protocols import ECU
@@ -375,7 +377,12 @@ def discover_mqtt_host():
 def connect_mqtt_broker(mqtt_broker_address):
     logging.debug('Connecting to {}'.format(mqtt_broker_address))
     try:
-        mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        try:
+            mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        except Exception as ex:
+            mqttc = mqtt.Client(client_id="", clean_session=True, userdata=None)
+
+
         mqttc.on_connect = on_connect
         mqttc.on_message = on_message
         mqttc.connect(mqtt_broker_address, 1883, 60)
