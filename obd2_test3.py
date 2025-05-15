@@ -1,5 +1,7 @@
 # pip3 install paho-mqtt
 # pip3 install --user zeroconf
+import sys
+sys.path.insert(0, '/home/pconroy/OBD2Rv/obd-0.7.3')
 
 import sys
 import time
