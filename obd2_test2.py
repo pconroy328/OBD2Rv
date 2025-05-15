@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '/home/pconroy/OBD2Rv/obd-0.7.3')
+
 import obd
 #obd.debug.console = True
 connection = obd.OBD() # auto-connects to USB or RF port
