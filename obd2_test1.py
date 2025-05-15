@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '/home/pconroy/OBD2Rv/obd-0.7.3')
+
 import obd
 ##obd.debug.console = True
 obd.logger.setLevel(obd.logging.DEBUG) # enables all debug information
